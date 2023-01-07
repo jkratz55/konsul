@@ -18,7 +18,7 @@ type AppConfig struct {
 	} `json:"server"`
 }
 
-func (a *AppConfig) Unmarshal(data []byte) error {
+func (a *AppConfig) Reload(data []byte) error {
 	return json.Unmarshal(data, a)
 }
 

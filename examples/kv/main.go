@@ -2,6 +2,7 @@ package kv
 
 import (
 	"github.com/hashicorp/consul/api"
+	"github.com/jkratz55/gonads/option"
 
 	"github.com/jkratz55/konsul"
 )
@@ -26,8 +27,10 @@ func main() {
 	// unmarshall the value from JSON to a go type.
 	var something string
 	kv.IfSome(func(val konsul.KeyValue) {
-		val.DecodeJSON(&something)
+		val.UnmarshalValueJSON(&something)
 	})
 
-	kv.
+	option.Map[konsul.KeyValue, any](kv, func(val konsul.KeyValue) any {
+		return ""
+	})
 }
