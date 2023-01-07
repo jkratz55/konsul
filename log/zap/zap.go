@@ -31,6 +31,7 @@ func Wrap(logger *zap.Logger) hclog.Logger {
 
 func (w Wrapper) Log(level hclog.Level, msg string, args ...interface{}) {
 	switch level {
+	// Zap doesn't have a Trace level so it gets mapped to Debug
 	case hclog.NoLevel, hclog.Trace, hclog.Debug:
 		w.Debug(msg, args...)
 	case hclog.Info:
@@ -43,6 +44,7 @@ func (w Wrapper) Log(level hclog.Level, msg string, args ...interface{}) {
 }
 
 func (w Wrapper) Trace(msg string, args ...interface{}) {
+	// Zap doesn't have a Trace level, Debug is the closest level
 	w.logger.Debug(msg, convertArgsToZapFields(args...)...)
 }
 
@@ -63,6 +65,7 @@ func (w Wrapper) Error(msg string, args ...interface{}) {
 }
 
 func (w Wrapper) IsTrace() bool {
+	// Zap doesn't have a trace level, always return false
 	return false
 }
 
@@ -99,7 +102,12 @@ func (w Wrapper) Name() string {
 }
 
 func (w Wrapper) Named(name string) hclog.Logger {
-	newName := fmt.Sprintf("%s.%s", w.name, name)
+	var newName string
+	if w.name != "" {
+		newName = fmt.Sprintf("%s.%s", w.name, name)
+	} else {
+		newName = name
+	}
 	return Wrapper{
 		logger: w.logger.Named(newName),
 		name:   newName,

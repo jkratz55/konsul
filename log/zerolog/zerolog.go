@@ -116,7 +116,12 @@ func (w Wrapper) Name() string {
 }
 
 func (w Wrapper) Named(name string) hclog.Logger {
-	newName := fmt.Sprintf("%s.%s", w.name, name)
+	var newName string
+	if w.name != "" {
+		newName = fmt.Sprintf("%s.%s", w.name, name)
+	} else {
+		newName = name
+	}
 	return Wrapper{
 		logger: w.logger,
 		name:   newName,

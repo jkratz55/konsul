@@ -118,12 +118,12 @@ func NewInstancer(config InstancerConfig) (*Instancer, error) {
 			"Service", config.Service,
 			"Tag", config.Tag,
 			"PassingOnly", config.PassingOnly,
-			"AllowStatle", config.AllowStale)
+			"AllowStale", config.AllowStale)
 		if err := plan.RunWithClientAndHclog(instancer.client, instancer.logger); err != nil {
 			// If the plan stops running unexpected behavior may occur within the
 			// application that is hard to troubleshoot/debug. In this case it's
 			// better to panic rather than continuing running in a potentially bad
-			// state without the callers knowledge.
+			// state without the callers' knowledge.
 			instancer.logger.Error("plan encountered an error while executing",
 				"err", err,
 				"service", instancer.service)
@@ -197,7 +197,7 @@ func (i *Instancer) Instances() []string {
 	}
 	i.mutex.RLock()
 	defer i.mutex.RUnlock()
-	instances := make([]string, 0)
+	instances := make([]string, len(i.instances))
 	copy(instances, i.instances)
 	return instances
 }
