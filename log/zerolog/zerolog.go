@@ -40,7 +40,7 @@ func (w Wrapper) Log(level hclog.Level, msg string, args ...interface{}) {
 	}
 }
 
-func (w Wrapper) Trace(msg string, args ...interface{}) {
+func (w Wrapper) Trace(msg string, args ...any) {
 	event := w.logger.Trace().Fields(args)
 	if w.name != "" {
 		event.Str("logger", w.name)
@@ -48,7 +48,7 @@ func (w Wrapper) Trace(msg string, args ...interface{}) {
 	event.Msg(msg)
 }
 
-func (w Wrapper) Debug(msg string, args ...interface{}) {
+func (w Wrapper) Debug(msg string, args ...any) {
 	event := w.logger.Debug().Fields(args)
 	if w.name != "" {
 		event.Str("logger", w.name)
@@ -56,7 +56,7 @@ func (w Wrapper) Debug(msg string, args ...interface{}) {
 	event.Msg(msg)
 }
 
-func (w Wrapper) Info(msg string, args ...interface{}) {
+func (w Wrapper) Info(msg string, args ...any) {
 	event := w.logger.Info().Fields(args)
 	if w.name != "" {
 		event.Str("logger", w.name)
@@ -64,7 +64,7 @@ func (w Wrapper) Info(msg string, args ...interface{}) {
 	event.Msg(msg)
 }
 
-func (w Wrapper) Warn(msg string, args ...interface{}) {
+func (w Wrapper) Warn(msg string, args ...any) {
 	event := w.logger.Warn().Fields(args)
 	if w.name != "" {
 		event.Str("logger", w.name)
@@ -72,7 +72,7 @@ func (w Wrapper) Warn(msg string, args ...interface{}) {
 	event.Msg(msg)
 }
 
-func (w Wrapper) Error(msg string, args ...interface{}) {
+func (w Wrapper) Error(msg string, args ...any) {
 	event := w.logger.Error().Fields(args)
 	if w.name != "" {
 		event.Str("logger", w.name)
@@ -100,11 +100,11 @@ func (w Wrapper) IsError() bool {
 	return w.logger.GetLevel() == zerolog.ErrorLevel
 }
 
-func (w Wrapper) ImpliedArgs() []interface{} {
-	return []interface{}{}
+func (w Wrapper) ImpliedArgs() []any {
+	return []any{}
 }
 
-func (w Wrapper) With(args ...interface{}) hclog.Logger {
+func (w Wrapper) With(args ...any) hclog.Logger {
 	return Wrapper{
 		logger: w.logger.With().Fields(args).Logger(),
 		name:   w.name,
@@ -137,6 +137,24 @@ func (w Wrapper) ResetNamed(name string) hclog.Logger {
 
 func (w Wrapper) SetLevel(level hclog.Level) {
 	// nop
+}
+
+func (w Wrapper) GetLevel() hclog.Level {
+	switch w.logger.GetLevel() {
+	case zerolog.TraceLevel:
+		return hclog.Trace
+	case zerolog.DebugLevel:
+		return hclog.Debug
+	case zerolog.InfoLevel:
+		return hclog.Info
+	case zerolog.WarnLevel:
+		return hclog.Warn
+	case zerolog.ErrorLevel, zerolog.PanicLevel, zerolog.FatalLevel:
+		// hclog has no concept of Panic or Fatal level so they get mapped to Error
+		return hclog.Error
+	default:
+		return hclog.NoLevel
+	}
 }
 
 func (w Wrapper) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {

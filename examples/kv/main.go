@@ -1,6 +1,9 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/hashicorp/consul/api"
 
 	"github.com/jkratz55/konsul"
@@ -24,22 +27,18 @@ func main() {
 	kvClient := konsul.NewKVClient(client)
 	kv, err := kvClient.Get("config/app", true)
 	if err != nil {
+		if errors.Is(err, konsul.ErrKeyNotFound) {
+			fmt.Println("Ohhh no the configuration is missing")
+		} else {
+			fmt.Println("Ohhh snap something went wrong communicating with Consul")
+		}
 		panic(err)
 	}
 
 	cfg := AppConfig{}
+	if err := kv.UnmarshalValueJSON(&cfg); err != nil {
+		panic(err)
+	}
 
-	// This will panic if the option is None, ie there wasn't a value. It will
-	// also panic if unmarshalling the value fails
-	kv.Expect("key value wasn't found").
-		MustUnmarshalValueJSON(&cfg)
-
-	// If there is a value do then try to do something with it, in this case
-	// unmarshall the value from JSON to a go type.
-	kv.IfSome(func(val konsul.KeyValue) {
-		err := val.UnmarshalValueJSON(&cfg)
-		if err != nil {
-			// todo: do something useful
-		}
-	})
+	fmt.Printf("%+v", cfg)
 }

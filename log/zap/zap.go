@@ -24,12 +24,12 @@ func Wrap(logger *zap.Logger) hclog.Logger {
 		panic("cannot wrap nil zap.Logger")
 	}
 	return Wrapper{
-		logger: logger,
+		logger: logger.WithOptions(zap.AddCallerSkip(1)),
 		name:   "",
 	}
 }
 
-func (w Wrapper) Log(level hclog.Level, msg string, args ...interface{}) {
+func (w Wrapper) Log(level hclog.Level, msg string, args ...any) {
 	switch level {
 	// Zap doesn't have a Trace level so it gets mapped to Debug
 	case hclog.NoLevel, hclog.Trace, hclog.Debug:
@@ -43,24 +43,24 @@ func (w Wrapper) Log(level hclog.Level, msg string, args ...interface{}) {
 	}
 }
 
-func (w Wrapper) Trace(msg string, args ...interface{}) {
+func (w Wrapper) Trace(msg string, args ...any) {
 	// Zap doesn't have a Trace level, Debug is the closest level
 	w.logger.Debug(msg, convertArgsToZapFields(args...)...)
 }
 
-func (w Wrapper) Debug(msg string, args ...interface{}) {
+func (w Wrapper) Debug(msg string, args ...any) {
 	w.logger.Debug(msg, convertArgsToZapFields(args...)...)
 }
 
-func (w Wrapper) Info(msg string, args ...interface{}) {
+func (w Wrapper) Info(msg string, args ...any) {
 	w.logger.Info(msg, convertArgsToZapFields(args...)...)
 }
 
-func (w Wrapper) Warn(msg string, args ...interface{}) {
+func (w Wrapper) Warn(msg string, args ...any) {
 	w.logger.Warn(msg, convertArgsToZapFields(args...)...)
 }
 
-func (w Wrapper) Error(msg string, args ...interface{}) {
+func (w Wrapper) Error(msg string, args ...any) {
 	w.logger.Error(msg, convertArgsToZapFields(args...)...)
 }
 
@@ -85,12 +85,12 @@ func (w Wrapper) IsError() bool {
 	return w.logger.Level() == zap.ErrorLevel
 }
 
-func (w Wrapper) ImpliedArgs() []interface{} {
+func (w Wrapper) ImpliedArgs() []any {
 	w.logger.Warn("ImpliedArgs in not implemented... this will always return nil")
 	return nil
 }
 
-func (w Wrapper) With(args ...interface{}) hclog.Logger {
+func (w Wrapper) With(args ...any) hclog.Logger {
 	return Wrapper{
 		logger: w.logger.With(convertArgsToZapFields(args...)...),
 		name:   w.name,
@@ -123,6 +123,23 @@ func (w Wrapper) ResetNamed(name string) hclog.Logger {
 
 func (w Wrapper) SetLevel(level hclog.Level) {
 	w.logger.Warn("SetLevel on Wrapper is a no-op")
+}
+
+func (w Wrapper) GetLevel() hclog.Level {
+	switch w.logger.Level() {
+	case zap.DebugLevel:
+		return hclog.Debug
+	case zap.InfoLevel:
+		return hclog.Info
+	case zap.WarnLevel:
+		return hclog.Warn
+	case zap.ErrorLevel, zap.FatalLevel, zap.DPanicLevel, zap.PanicLevel:
+		// hclog doesn't have concept of Panic and Fatal levels so it gets mapped
+		// to error level
+		return hclog.Error
+	default:
+		return hclog.NoLevel
+	}
 }
 
 func (w Wrapper) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
