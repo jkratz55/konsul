@@ -2,12 +2,17 @@ package konsul
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/consul/api"
 	"gopkg.in/yaml.v3"
+)
 
-	"github.com/jkratz55/gonads/option"
+var (
+	// ErrKeyNotFound is a sentinel error value indicating the key provided
+	// doesn't exist.
+	ErrKeyNotFound = errors.New("key not found")
 )
 
 // KeyValue is a wrapper around KVPair type from official Consul API package.
@@ -143,19 +148,21 @@ func NewKVClient(c *api.Client) *KVClient {
 // Get retrieves a key-value from the Consul KV store. The KeyValue is returned
 // wrapped by an Option as the key may or may not exist in Consul. If an error
 // occurs communicating with Consul a non-nil error value will be returned.
-func (c KVClient) Get(key string, allowStale bool) (option.Option[KeyValue], error) {
+func (c KVClient) Get(key string, allowStale bool) (KeyValue, error) {
 	kv, _, err := c.client.KV().Get(key, &api.QueryOptions{
 		AllowStale: allowStale,
 	})
 	// Error communicating with Consul
 	if err != nil {
-		return option.None[KeyValue](), err
+		return KeyValue{}, err
 	}
 	// Key doesn't exist
 	if kv == nil {
-		return option.None[KeyValue](), nil
+		return KeyValue{}, nil
 	}
-	return option.Some(KeyValue{base: kv}), nil
+	return KeyValue{
+		base: kv,
+	}, nil
 }
 
 // MustGet retrieves a key-value from Consul KV store. If an error occurs fetching

@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/hashicorp/consul/api"
+	"go.uber.org/zap"
 
 	"github.com/jkratz55/konsul"
+	kzap "github.com/jkratz55/konsul/log/zap"
 )
 
 // AppConfig is a struct representing some imaginary configuration that might
@@ -24,7 +25,7 @@ type AppConfig struct {
 	} `json:"server" yaml:"server"`
 }
 
-func (a *AppConfig) Reload(data []byte) error {
+func (a *AppConfig) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, a)
 }
 
@@ -36,17 +37,40 @@ func main() {
 		panic(err)
 	}
 
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+
 	cfg := &AppConfig{}
-	err = konsul.Watch(client, "config/app", cfg, nil)
+	changeCount := 0
+	cb := func(key string, err error) {
+		changeCount++
+		fmt.Println("Change Detected!")
+		fmt.Printf("%+v\n", cfg)
+	}
+
+	go func() {
+		err = konsul.Watch(client, "config/app", cfg, konsul.WatchOptions{
+			Logger:                  kzap.Wrap(logger),
+			PanicOnUnmarshalFailure: false,
+			WatchNotification:       cb,
+		})
+		// If Watch returns an error we aren't getting KV updates anymore so we'll
+		// panic rather than running in a potentially weird state because the
+		// configuration changed in Consul but didn't reflect in the application.
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
 	select {
-	case <-time.After(5 * time.Minute):
-		fmt.Println("Shutting down")
 	case <-ctx.Done():
 		stop()
+		fmt.Printf("Changes detected: %d", changeCount)
 		fmt.Println("Goodbye")
 	}
 }
